@@ -64,7 +64,7 @@ blueprint:
           min: 100
           max: 5000
           step: 50
-	  
+
     on_short:
       name: Short Press - On Button
       description: The action to perform on Short Press of the On Button
