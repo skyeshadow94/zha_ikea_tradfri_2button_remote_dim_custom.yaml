@@ -1,0 +1,143 @@
+---
+# This automation simulates the use of the IKEA TRADFRI Dimmer control
+# connected through ZHA.
+---
+
+# | Button      | Action              |
+# | ----------- | ------------------- |
+# | on (short)  | Turn the light on   |
+# | off (short) | Turn the light off  |
+# | on (long)   | Increase brightness |
+# | off (long)  | Decrease brightness |
+
+blueprint:
+#  This is a mashup of two blueprints
+#  source_url: https://github.com/niro1987/homeassistant-config/blob/main/blueprints/automation/niro1987/zha_ikea_tradfri_2button_remote_custom.yaml
+#  source_url: https://gist.githubusercontent.com/shannon/5141322da9ab425e503858477ffacec9/raw/44d49f005a5a4456f7e6e3c0d9a8e716004a9bf5/ikea_tradfri_2button_dimmer.yaml
+
+  name: ZHA - IKEA TRADFRI - 2 Button Remote - with Dimmer brightness and Custom Actions
+
+  description: >-
+    This automation simulates the use of the IKEA TRADFRI on/off switch
+    connected through ZHA.
+
+  domain: automation
+  
+  input:
+#    button_device:
+#      name: Button
+#      description: The button to use for controling the lights.
+#      selector:
+#        device:
+#          integration: zha
+#          manufacturer: IKEA of Sweden
+#          model: TRADFRI on/off switch
+    remote:
+      name: IKEA TRADFRI remote control
+      description: Select the remote control you wish to use.
+      selector:
+        device:
+          integration: zha
+          manufacturer: IKEA of Sweden
+          model: TRADFRI on/off switch
+    light_target:
+      name: Lights
+      description: The lights to Dimmer.
+      selector:
+        target:
+          entity:
+            domain: light
+
+    light_step:
+      name: "Step the lights this much (%)"
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 25
+          step: 1
+
+    light_delay_ms:
+      name: "Step the lights this often (ms)"
+      default: 300
+      selector:
+        number:
+          min: 100
+          max: 5000
+          step: 50
+	  
+    on_short:
+      name: Short Press - On Button
+      description: The action to perform on Short Press of the On Button
+      selector:
+        action:
+      default: []
+    off_short:
+      name: Short Press - Off Button
+      description: The action to perform on Short Press of the Off Button
+      selector:
+        action:
+      default: []
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  var_button_device: !input remote
+  var_light_target: !input light_target
+  var_light_step: !input light_step
+  var_light_delay_ms: !input light_delay_ms
+
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote
+
+action:
+  - choose:
+      # Short-Press the on button
+      - conditions:
+          - condition: template
+            value_template: '{{ trigger.event.data.command == "on" }}'
+        sequence: !input on_short
+
+      # Short-Press the off button
+      - conditions:
+          - condition: template
+            value_template: '{{ trigger.event.data.command == "off" }}'
+        sequence: !input off_short
+
+      # Long-Press the on button
+      - conditions:
+          - condition: template
+            value_template: '{{ trigger.event.data.command == "move_with_on_off" }}'
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target: !input light_target
+                  data_template:
+                    brightness_step_pct: '{{var_light_step}}'
+                    transition: '{{(var_light_delay_ms|int)/1000}}'
+                - delay:
+                    milliseconds: '{{var_light_delay_ms}}'
+
+      # Long-Press the off button
+      - conditions:
+          - condition: template
+            value_template: '{{ trigger.event.data.command == "move" }}'
+        sequence:
+          - repeat:
+              while: []
+              sequence:
+                - service: light.turn_on
+                  target: !input light_target
+                  data_template:
+                    brightness_step_pct: '-{{var_light_step}}'
+                    transition: '{{(var_light_delay_ms|int)/1000}}'
+                - delay:
+                    milliseconds: '{{var_light_delay_ms}}'
+    # Any other event will cancel the repeat loops (i.e. releasing the [on|off] button)
+    default: []
