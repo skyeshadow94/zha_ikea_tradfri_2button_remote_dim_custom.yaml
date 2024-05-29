@@ -22,23 +22,18 @@ blueprint:
 
   domain: automation
   
-  input:
-#    button_device:
-#      name: Button
-#      description: The button to use for controling the lights.
-#      selector:
-#        device:
-#          integration: zha
-#          manufacturer: IKEA of Sweden
-#          model: TRADFRI on/off switch
+ input:
     remote:
-      name: IKEA TRADFRI remote control
-      description: Select the remote control you wish to use.
+      name: Remote
+      description: The remote that will control the lights
       selector:
         device:
-          integration: zha
-          manufacturer: IKEA of Sweden
-          model: TRADFRI on/off switch
+          - integration: zha
+            manufacturer: 'IKEA of Sweden'
+            model: 'TRADFRI on/off switch'
+          - integration: zha
+            manufacturer: 'IKEA of Sweden'
+            model: 'RODRET Dimmer'
     light_target:
       name: Lights
       description: The lights to Dimmer.
